@@ -1,0 +1,22 @@
+{
+  "name": "whiteboard",
+  "version": "1.0.0",
+  "description": "A simple collaborative whiteboard using socket.io",
+  "main": "index.js",
+  "keywords": [
+    "socket.io",
+    "whiteboard"
+  ],
+  "dependencies": {
+    "child_process": "^1.0.2",
+    "express": "~4.17.1",
+    "https": "^1.0.0",
+    "openssl": "^2.0.0",
+    "socket.io": "^4.0.0"
+  },
+  "scripts": {
+    "start": "nodemon index"
+  },
+  "author": "Damien Arrachequesne",
+  "license": "MIT"
+}

@@ -1,0 +1,67 @@
+
+/**
+ * Fix user-agent
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/**
+ * Canvas
+ */
+
+.whiteboard {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 0;
+}
+
+.head{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10%;
+}
+
+.fire {
+  position: absolute;
+  width: 20px;
+  height: 40px;
+  background: radial-gradient(circle, #ff5722, #ff0000);
+  opacity: 0.8;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.fire-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fire {
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.fire-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
