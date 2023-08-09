@@ -13,9 +13,11 @@ const server = https.createServer({
 }, app);
 
 const io = socketIO(server);
-
+const customFormations = {};
 io.on("connection", (socket) => {
   console.log("new client connected!");
+
+
 
   // Listen for "objectPosition" event from clients
   socket.on("updatePlayerPosition", (data) => {
@@ -23,17 +25,31 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("updatePlayerPosition", data);
   });
 
+
+
   // Listen for "updateFormation" event from clients
   socket.on("updateFormation", (formation) => {
     console.log("Received updateFormation event:", formation);
-    io.emit("updateFormation", formation);
+    socket.broadcast.emit("updateFormation", formation); // Broadcast to other clients
   });
+
+
+  // Listen for "deleteFormation" event from clients
+  socket.on("deleteFormation", (formationName) => {
+    console.log("Received deleteFormation event:", formationName);
+    delete customFormations[formationName]; // Delete the custom formation
+    io.emit("updateCustomFormations", customFormations); // Broadcast the updated custom formations
+  });
+
+
 
   // Handle disconnection
   socket.on("disconnect", () => {
     console.log("A client disconnected!");
   });
 });
+
+
 
 const port = 8000; // You can change this to any available port
 server.listen(port, () => {

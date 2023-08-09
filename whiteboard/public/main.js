@@ -9,20 +9,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const socket = io();
   let isDragging = false;
   let offsetX, offsetY, currentDraggable;
-  canvas.style.background='#6ce76c'
+  canvas.style.background = '#6ce76c'
+  let activeTouches = [];
+  let customFormations = {}
+
+
+  // Function to find a player based on touch identifier
+  function findPlayerByTouchId(touchId) {
+    return activeTouches.find((touch) => touch.id === touchId)?.player;
+  }
+
   // // Player positions data
   let players = [
-    { x: 50, y: 50 },    
-    { x: 150, y: 50 },   
-    { x: 250, y: 50 },   
-    { x: 350, y: 50 },   
-    { x: 450, y: 50 },   
-    { x: 550, y: 50 },   
-    { x: 650, y: 50 },   
-    { x: 750, y: 50 },   
-    { x: 850, y: 50 },   
-    { x: 950, y: 50 },   
-    { x: 1050, y: 50 },  
+    { x: 20, y: 31 },
+    { x: 20, y: 97 },
+    { x: 20, y: 166 },
+    { x: 20, y: 232 },
+    { x: 20, y: 299 },
+    { x: 20, y: 373 },
+    { x: 20, y: 446 },
+    { x: 20, y: 518 },
+    { x: 20, y: 597 },
+    { x: 20, y: 669 },
+    { x: 20, y: 741 },
   ];
 
   // Function to draw the players on the canvas
@@ -38,6 +47,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Function to update player positions based on the selected formation
+
+  // Handle formation change event
+  let formationSelect = document.getElementById("formation");
+  formationSelect.addEventListener("change", () => {
+    const selectedFormation = formationSelect.value;
+    if (selectedFormation in customFormations) {
+      players = JSON.parse(localStorage.getItem(selectedFormation));
+      drawPlayers();
+
+      // Emit the selected custom formation to the server
+      socket.emit("updateFormation", selectedFormation);
+    } else {
+      updateFormation(selectedFormation);
+    }
+  });
   let currentFormation = "default";
   function updateFormation(formation) {
     const positions = {
@@ -87,21 +111,24 @@ document.addEventListener("DOMContentLoaded", () => {
     // Apply the positions to each player element
     players.forEach((player, index) => {
       player.x = selectedFormation[index].x;
-      console.log(" player.x ",selectedFormation[index].x);
       player.y = selectedFormation[index].y;
     });
-  
+
     // Emit the updated formation to the server
     drawPlayers()
-    socket.emit("updateFormation", formation);
+
+    if (currentFormation !== formation) {
+      socket.emit("updateFormation", formation);
+      currentFormation = formation; // Update the currentFormation variable
+    }
   }
 
-  // Handle formation change event
-  const formationSelect = document.getElementById("formation");
-  formationSelect.addEventListener("change", () => {
-    const selectedFormation = formationSelect.value;
-    updateFormation(selectedFormation);
-  });
+  // // Handle formation change event
+  // const formationSelect = document.getElementById("formation");
+  // formationSelect.addEventListener("change", () => {
+  //   const selectedFormation = formationSelect.value;
+  //   updateFormation(selectedFormation);
+  // });
 
   // Draw initial players
   drawPlayers();
@@ -146,22 +173,21 @@ document.addEventListener("DOMContentLoaded", () => {
     isDragging = false;
   });
 
-  positionBtn.addEventListener('click',()=>{
+  positionBtn.addEventListener('click', () => {
     let jsonText = "[";
-  players.forEach((player) => {
-    jsonText += `{x:${player.x},y:${player.y}},`;
-  });
-  jsonText += "]";
-  console.log(jsonText);
+    players.forEach((player) => {
+      jsonText += `{x:${player.x},y:${player.y}},`;
+    });
+    jsonText += "]";
+    console.log(jsonText);
+    alert(jsonText)
   })
 
-  // socket.on("updateFormation", (formation) => {
-  //   const formationSelect = document.getElementById("formation");
-  //   formationSelect.value = formation;
-  //   updateFormation(formation);
-  // });
-
-
+  socket.on("updateFormation", (formation) => {
+    const formationSelect = document.getElementById("formation");
+    formationSelect.value = formation; // Update the select element's value
+    updateFormation(formation); // Call the function to apply the new formation
+  });
   // Handle incoming data from the server to update player positions
   socket.on("updatePlayerPosition", (data) => {
     const { id, position } = data;
@@ -169,4 +195,134 @@ document.addEventListener("DOMContentLoaded", () => {
     players[id].y = position.y;
     drawPlayers();
   });
+
+
+
+
+  // Save custom formation
+  function saveCustomFormation() {
+    const name = prompt("Enter a name for the custom formation:");
+    if (name) {
+      customFormations[name] = [...players]; // Save the current player positions as the custom formation
+
+      // Also save the player positions for the custom formation
+      localStorage.setItem(name, JSON.stringify(players));
+    }
+
+  }
+
+
+  // Update formation dropdown with custom formations
+  function updateFormationDropdown() {
+    const formationSelect = document.getElementById("formation");
+
+    for (const name in customFormations) {
+      // Check if the custom option already exists
+      const existingOption = formationSelect.querySelector(`option[value="${name}"]`);
+
+      if (!existingOption) {
+        const customOption = document.createElement("option");
+        customOption.value = name;
+        customOption.textContent = name;
+
+
+        formationSelect.appendChild(customOption);
+      }
+    }
+  }
+
+  // Add a delete button
+  const deleteButton = document.getElementById('delete-btn');
+  deleteButton.addEventListener("click", () => deleteCustomFormation());
+
+
+  function deleteCustomFormation() {
+    const formationSelect = document.getElementById("formation");
+    const selectedOption = formationSelect.options[formationSelect.selectedIndex];
+
+    if (selectedOption && confirm(`Are you sure you want to delete the formation '${selectedOption.value}'?`)) {
+      const formationName = selectedOption.value;
+      socket.emit("deleteFormation", formationName); // Emit the event to the server
+
+      // Remove the deleted formation option from the dropdown
+      formationSelect.removeChild(selectedOption);
+
+      // Remove the formation from the local customFormations object
+      delete customFormations[formationName];
+
+      // Clear the selected option formatting
+      formationSelect.selectedIndex = -1;
+      updateFormation('default')
+    }
+  }
+
+
+  socket.on("updateCustomFormations", (formations) => {
+    customFormations = formations;
+    updateFormationDropdown();
+  });
+
+  // Handle save button click event
+  const saveBtn = document.getElementById("save-btn");
+  saveBtn.addEventListener("click", () => {
+    saveCustomFormation();
+    updateFormationDropdown(); // Update the dropdown after saving a new custom formation
+  });
+
+
+
+  // Mobile Touch events:
+
+  canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+
+    for (const touch of e.touches) {
+      const touchX = touch.pageX - rect.left;
+      const touchY = touch.pageY - rect.top;
+
+      // Check if the touch is over a player
+      const player = players.find((player) => {
+        const dx = player.x - touchX;
+        const dy = player.y - touchY;
+        return dx * dx + dy * dy < 20 * 20;
+      });
+
+      if (player) {
+        activeTouches.push({ id: touch.identifier, player });
+      }
+    }
+  });
+
+  canvas.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+
+    for (const touch of e.touches) {
+      const touchX = touch.pageX - rect.left;
+      const touchY = touch.pageY - rect.top;
+      const player = findPlayerByTouchId(touch.identifier);
+
+      if (player) {
+        player.x = touchX;
+        player.y = touchY;
+        drawPlayers();
+        socket.emit("updatePlayerPosition", {
+          id: players.indexOf(player),
+          position: { x: touchX, y: touchY },
+        });
+      }
+    }
+  });
+
+  canvas.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      const player = findPlayerByTouchId(touch.identifier);
+      if (player) {
+        activeTouches = activeTouches.filter((touch) => touch.id !== touch.identifier);
+      }
+    }
+  });
+
 });
